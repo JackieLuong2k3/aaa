@@ -43,10 +43,13 @@ export default function App() {
     // When audio metadata is loaded on mobile / desktop
     const handleMetadata = () => {
       enforceSeekToStartTime();
+      // Try play as soon as metadata is ready
+      startPlayback();
     };
 
     const handleCanPlay = () => {
       enforceSeekToStartTime();
+      startPlayback();
     };
 
     // When playback actually starts on mobile (iOS Safari / Chrome Mobile)
@@ -88,22 +91,22 @@ export default function App() {
         playPromise
           .then(() => {
             setIsPlaying(true);
-            // Critical for iOS Safari: re-assert currentTime after play promise resolves
             if (audio.currentTime < START_TIME - 1) {
               audio.currentTime = START_TIME;
             }
           })
           .catch(() => {
-            // Autoplay blocked by browser policy until user interacts
+            // If browser blocks unmuted autoplay without gesture, the passive listeners below handle it immediately
           });
       }
     };
 
-    // Attempt instant autoplay
+    // Immediate attempt on mount
     startPlayback();
 
-    // Ensure audio starts on first click or touch anywhere on mobile
-    const handleFirstGesture = () => {
+    // Universal passive listeners: triggers on ANY first touch, scroll, pointer movement, or click
+    const universalEvents = ['click', 'touchstart', 'touchend', 'pointerdown', 'scroll', 'keydown'];
+    const handleImmediateGesture = () => {
       if (audio.paused) {
         startPlayback();
       } else if (audio.currentTime < START_TIME - 1) {
@@ -111,8 +114,9 @@ export default function App() {
       }
     };
 
-    window.addEventListener('click', handleFirstGesture, { once: true, passive: true });
-    window.addEventListener('touchend', handleFirstGesture, { once: true, passive: true });
+    universalEvents.forEach(evt => {
+      window.addEventListener(evt, handleImmediateGesture, { once: true, passive: true });
+    });
 
     return () => {
       audio.pause();
@@ -120,8 +124,9 @@ export default function App() {
       audio.removeEventListener('canplay', handleCanPlay);
       audio.removeEventListener('playing', handlePlaying);
       audio.removeEventListener('timeupdate', handleTimeUpdate);
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('touchend', handleFirstGesture);
+      universalEvents.forEach(evt => {
+        window.removeEventListener(evt, handleImmediateGesture);
+      });
     };
   }, []);
 
@@ -154,15 +159,15 @@ export default function App() {
   };
 
   return (
-    <main className="min-h-screen bg-[#FAF7F2] text-[#2C241E] flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 relative selection:bg-[#E8C5A5]">
+    <main className="min-h-screen bg-[#FAF7F2] text-[#2C241E] flex flex-col items-center justify-center p-3 sm:p-5 md:p-8 relative selection:bg-[#E8C5A5]">
       {/* Hiệu ứng 1 loại cánh hoa rơi nhẹ nhàng */}
       <FallingFlowersCanvas />
 
       {/* Thanh điều khiển nhạc tối giản ở góc trên */}
-      <header className="fixed top-4 right-4 z-30">
+      <header className="fixed top-3 right-3 sm:top-4 sm:right-4 z-30">
         <button
           onClick={handleToggleMusic}
-          className="flex items-center gap-2 px-3.5 py-2 rounded-full bg-white/90 hover:bg-white backdrop-blur-md border border-[#8B5A2B]/20 text-[#8B2500] shadow-md text-xs font-semibold transition hover:scale-105 active:scale-95"
+          className="flex items-center gap-2 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-full bg-white/90 hover:bg-white backdrop-blur-md border border-[#8B5A2B]/20 text-[#8B2500] shadow-md text-xs font-semibold transition hover:scale-105 active:scale-95"
           title={isPlaying ? 'Tắt nhạc nền' : 'Bật nhạc: Em Là Cô Giáo Vùng Cao (1:10)'}
         >
           {isPlaying ? (
@@ -172,7 +177,7 @@ export default function App() {
                 <span className="w-0.5 bg-[#B8860B] h-2 animate-bounce rounded-full" />
                 <span className="w-0.5 bg-[#8B2500] h-3 animate-pulse rounded-full" />
               </div>
-              <span className="truncate max-w-[180px]">Nhạc: Em Là Cô Giáo Vùng Cao</span>
+              <span className="truncate max-w-[150px] sm:max-w-[200px]">Nhạc: Em Là Cô Giáo Vùng Cao</span>
             </>
           ) : (
             <>
@@ -183,43 +188,52 @@ export default function App() {
         </button>
       </header>
 
-      {/* Thông báo chạm nghe nhạc nếu trình duyệt chặn autoplay */}
-      {!isPlaying && (
-        <div
-          onClick={handleToggleMusic}
-          className="fixed top-16 z-30 cursor-pointer animate-bounce"
-        >
-          <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#8B2500] text-white text-xs font-medium shadow-lg hover:bg-[#A32E00] transition">
-            <Music className="w-3.5 h-3.5" />
-            <span>Chạm để nghe nhạc &quot;Em Là Cô Giáo Vùng Cao&quot; (1:10)</span>
-          </div>
-        </div>
-      )}
-
-      {/* KHỐI 1 TẤM THIỆP DUY NHẤT Ở TRUNG TÂM */}
-      <div className="relative z-20 w-full max-w-4xl my-auto">
+      {/* KHỐI 1 TẤM THIỆP DUY NHẤT Ở TRUNG TÂM - CÂN ĐỐI TRÊN CẢ DESKTOP & MOBILE */}
+      <div className="relative z-20 w-full max-w-5xl my-auto py-2 sm:py-4">
         <div className="bg-[#FFFDF9] rounded-3xl shadow-2xl card-shadow-luxury border border-[#B8860B]/30 overflow-hidden grid grid-cols-1 lg:grid-cols-12 items-stretch">
           
-          {/* CỘT TRÁI: BỨC BÌA TRANH 20/11 ẤM ÁP */}
-          <div className="lg:col-span-5 relative min-h-[260px] sm:min-h-[340px] lg:min-h-full overflow-hidden bg-[#241710]">
-            <img
-              src={cardCoverImg}
-              alt="Thiệp chúc mừng ngày Nhà giáo Việt Nam 20-11"
-              referrerPolicy="no-referrer"
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = '/assets/images/card_cover_teachers_day_1794045030288.jpg';
-              }}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/60 via-transparent to-transparent pointer-events-none" />
-
-            {/* Dòng chữ trang trí trên ảnh */}
-            <div className="absolute bottom-4 left-4 right-4 text-white">
-              <span className="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">
-                KỶ NIỆM 20/11
+          {/* CỘT TRÁI: BỨC TRANH NGHỆ THUẬT VỪA VẶN BỐ CỤC 4:3 (KHÔNG BỊ CẮT CHỮ) */}
+          <div className="lg:col-span-5 bg-gradient-to-br from-[#26170E] via-[#1D110A] to-[#140A05] p-4 sm:p-5 lg:p-6 flex flex-col justify-between border-b lg:border-b-0 lg:border-r border-[#8B5A2B]/20">
+            {/* Header nhỏ góc trái */}
+            <div className="flex items-center justify-between gap-2 mb-2 sm:mb-3">
+              <span className="inline-flex items-center gap-1.5 text-[10px] sm:text-[11px] uppercase tracking-widest text-amber-200/90 font-semibold">
+                <Sparkles className="w-3 h-3 text-amber-300" />
+                TRI ÂN THẦY CÔ 20/11
               </span>
-              <p className="font-serif italic text-xs text-stone-200 mt-1">
-                &ldquo;Gánh cái chữ băng rừng lội suối, giữa non xanh mây vờn đỉnh đèo cao...&rdquo;
+              <span className="text-[10px] text-amber-300/60 font-serif italic">
+                Nét chữ nhân văn
+              </span>
+            </div>
+
+            {/* Khung tranh 4:3 giữ trọn vẹn toàn bộ chi tiết, bảng chữ và trang sách */}
+            <div className="relative w-full aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-amber-400/25 group my-auto bg-black/40">
+              <img
+                src={cardCoverImg}
+                alt="Thiệp chúc mừng ngày Nhà giáo Việt Nam 20-11"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = '/assets/images/card_cover_teachers_day_1794045030288.jpg';
+                }}
+                className="w-full h-full object-cover sm:object-cover transition-transform duration-700 group-hover:scale-102"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+              <div className="absolute bottom-2.5 left-3 right-3 text-white text-left">
+                <span className="text-[9px] uppercase tracking-widest text-amber-200 font-semibold">
+                  MỪNG NGÀY NHÀ GIÁO
+                </span>
+                <p className="font-serif italic text-[11px] text-stone-200 line-clamp-1">
+                  Tri ân những người gieo mầm tri thức
+                </p>
+              </div>
+            </div>
+
+            {/* Dòng ca từ ý nghĩa từ bài hát */}
+            <div className="mt-3 pt-3 border-t border-amber-300/15 text-stone-300">
+              <p className="font-serif italic text-xs leading-relaxed text-amber-100/90 text-left">
+                &ldquo;Gánh cái chữ băng rừng lội suối, giữa non xanh mây vờn đỉnh đèo cao... Trang giáo án còn gì đẹp hơn thế, dẫu đá cheo leo ươm những mầm xanh.&rdquo;
+              </p>
+              <p className="text-[10px] text-amber-300/70 font-sans mt-1 text-left">
+                Bài hát: Em Là Cô Giáo Vùng Cao (Sơn Hoàng & Mỷ Lam)
               </p>
             </div>
           </div>
