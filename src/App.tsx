@@ -3,16 +3,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FallingFlowersCanvas } from './components/FallingFlowersCanvas';
 import { Music, VolumeX, Copy, Check, Heart, Sparkles } from 'lucide-react';
+import cardCoverImg from './assets/images/card_cover_teachers_day_1794045030288.jpg';
 
 export default function App() {
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
   const [recipient, setRecipient] = useState<string>('Thầy Cô kính yêu');
   const [sender, setSender] = useState<string>('Học trò của Thầy Cô');
-  const audioRef = React.useRef<HTMLAudioElement | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const AUDIO_SRC = '/assets/aistudio/Em_l__c__gi_o_v_ng_cao_-_S_n_Ho_ng_M__Lam__T_nh_ca_T_y_B_c_hay_nh_t_-_S_n_Ho_ng_M__Lam_d3118528.mp3';
   const START_TIME = 70; // 1:10 = 70 seconds
@@ -24,24 +25,52 @@ export default function App() {
   useEffect(() => {
     const audio = new Audio(AUDIO_SRC);
     audio.preload = 'auto';
-    audio.currentTime = START_TIME;
     audioRef.current = audio;
 
-    const startPlayback = () => {
-      if (audio.currentTime < START_TIME) {
-        audio.currentTime = START_TIME;
+    let hasSeeked = false;
+
+    const enforceSeekToStartTime = () => {
+      try {
+        if (!hasSeeked || audio.currentTime < START_TIME - 1) {
+          audio.currentTime = START_TIME;
+          hasSeeked = true;
+        }
+      } catch {
+        // ReadyState may not be ready yet
       }
-      audio.play().then(() => {
-        setIsPlaying(true);
-      }).catch(() => {
-        // Browser requires user interaction
-      });
     };
 
-    // Attempt instant autoplay
-    startPlayback();
+    // When audio metadata is loaded on mobile / desktop
+    const handleMetadata = () => {
+      enforceSeekToStartTime();
+    };
 
-    // Loop back to 1:10 when finished
+    const handleCanPlay = () => {
+      enforceSeekToStartTime();
+    };
+
+    // When playback actually starts on mobile (iOS Safari / Chrome Mobile)
+    const handlePlaying = () => {
+      setIsPlaying(true);
+      if (audio.currentTime < START_TIME - 1) {
+        audio.currentTime = START_TIME;
+      }
+    };
+
+    // Safeguard timeupdate: if mobile started at 0:00 before seeking was ready, immediately jump to 1:10
+    const handleTimeUpdate = () => {
+      if (!hasSeeked && audio.currentTime < START_TIME - 0.5) {
+        audio.currentTime = START_TIME;
+        hasSeeked = true;
+      }
+    };
+
+    audio.addEventListener('loadedmetadata', handleMetadata);
+    audio.addEventListener('canplay', handleCanPlay);
+    audio.addEventListener('playing', handlePlaying);
+    audio.addEventListener('timeupdate', handleTimeUpdate);
+
+    // Loop back to 1:10 when song finishes
     audio.addEventListener('ended', () => {
       audio.currentTime = START_TIME;
       audio.play().catch(() => {});
@@ -50,20 +79,49 @@ export default function App() {
     audio.onplay = () => setIsPlaying(true);
     audio.onpause = () => setIsPlaying(false);
 
-    // Ensure audio starts on first click anywhere if initial autoplay was blocked
-    const handleFirstGesture = () => {
-      if (audio.paused) {
-        startPlayback();
+    const startPlayback = () => {
+      if (audio.readyState >= 1) {
+        enforceSeekToStartTime();
+      }
+      const playPromise = audio.play();
+      if (playPromise !== undefined) {
+        playPromise
+          .then(() => {
+            setIsPlaying(true);
+            // Critical for iOS Safari: re-assert currentTime after play promise resolves
+            if (audio.currentTime < START_TIME - 1) {
+              audio.currentTime = START_TIME;
+            }
+          })
+          .catch(() => {
+            // Autoplay blocked by browser policy until user interacts
+          });
       }
     };
 
-    window.addEventListener('click', handleFirstGesture, { once: true });
-    window.addEventListener('touchstart', handleFirstGesture, { once: true });
+    // Attempt instant autoplay
+    startPlayback();
+
+    // Ensure audio starts on first click or touch anywhere on mobile
+    const handleFirstGesture = () => {
+      if (audio.paused) {
+        startPlayback();
+      } else if (audio.currentTime < START_TIME - 1) {
+        audio.currentTime = START_TIME;
+      }
+    };
+
+    window.addEventListener('click', handleFirstGesture, { once: true, passive: true });
+    window.addEventListener('touchend', handleFirstGesture, { once: true, passive: true });
 
     return () => {
       audio.pause();
+      audio.removeEventListener('loadedmetadata', handleMetadata);
+      audio.removeEventListener('canplay', handleCanPlay);
+      audio.removeEventListener('playing', handlePlaying);
+      audio.removeEventListener('timeupdate', handleTimeUpdate);
       window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
+      window.removeEventListener('touchend', handleFirstGesture);
     };
   }, []);
 
@@ -73,10 +131,18 @@ export default function App() {
     if (isPlaying) {
       audio.pause();
     } else {
-      if (audio.currentTime < START_TIME || audio.ended) {
+      if (audio.currentTime < START_TIME - 1 || audio.ended) {
         audio.currentTime = START_TIME;
       }
-      audio.play().then(() => setIsPlaying(true)).catch(() => {});
+      const p = audio.play();
+      if (p !== undefined) {
+        p.then(() => {
+          setIsPlaying(true);
+          if (audio.currentTime < START_TIME - 1) {
+            audio.currentTime = START_TIME;
+          }
+        }).catch(() => {});
+      }
     }
   };
 
@@ -137,9 +203,12 @@ export default function App() {
           {/* CỘT TRÁI: BỨC BÌA TRANH 20/11 ẤM ÁP */}
           <div className="lg:col-span-5 relative min-h-[260px] sm:min-h-[340px] lg:min-h-full overflow-hidden bg-[#241710]">
             <img
-              src="/src/assets/images/card_cover_teachers_day_1794045030288.jpg"
+              src={cardCoverImg}
               alt="Thiệp chúc mừng ngày Nhà giáo Việt Nam 20-11"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = '/assets/images/card_cover_teachers_day_1794045030288.jpg';
+              }}
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-t lg:bg-gradient-to-r from-black/60 via-transparent to-transparent pointer-events-none" />

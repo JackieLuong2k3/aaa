@@ -281,7 +281,7 @@ export const GreetingCard3D: React.FC<Props> = ({ customization, onOpenCustomize
                 <div className="relative bg-[#20140D] text-stone-100 flex flex-col md:flex-row items-stretch">
                   <div className="w-full md:w-3/5 relative min-h-[360px] md:min-h-[500px]">
                     <img
-                      src="/src/assets/images/card_cover_teachers_day_1794045030288.jpg"
+                      src="/assets/images/card_cover_teachers_day_1794045030288.jpg"
                       alt="Bìa thiệp Tri Ân Thầy Cô 20/11"
                       referrerPolicy="no-referrer"
                       className="w-full h-full object-cover"

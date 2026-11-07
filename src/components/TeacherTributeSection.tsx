@@ -20,7 +20,7 @@ export const TeacherTributeSection: React.FC = () => {
         {/* Left Column: Boat Metaphor Image */}
         <div className="lg:col-span-7 relative min-h-[320px] lg:min-h-[460px] overflow-hidden">
           <img
-            src="/src/assets/images/teacher_boat_metaphor_1794045030436.jpg"
+            src="/assets/images/teacher_boat_metaphor_1794045030436.jpg"
             alt="Người lái đò tri thức trên dòng sông quê hương"
             referrerPolicy="no-referrer"
             className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-700"
