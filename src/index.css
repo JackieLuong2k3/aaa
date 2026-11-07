@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-serif: 'Playfair Display', Georgia, serif;
+    --font-prose: 'Lora', Georgia, serif;
+    --font-sans: 'Be Vietnam Pro', system-ui, sans-serif;
+    --font-script: 'Dancing Script', cursive;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    overflow-x: hidden;
+  }
+}
+
+.font-serif-title {
+  font-family: var(--font-serif);
+}
+
+.font-prose-reading {
+  font-family: var(--font-prose);
+}
+
+.font-script-calligraphy {
+  font-family: var(--font-script);
+}
+
+/* 3D Card Flipping & Unfolding Effects */
+.perspective-1500 {
+  perspective: 1500px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+/* Custom subtle parchment texture & vignette */
+.parchment-pattern {
+  background-color: #faf6f0;
+  background-image: 
+    radial-gradient(#d3c5b4 0.75px, transparent 0.75px),
+    radial-gradient(#d3c5b4 0.75px, #faf6f0 0.75px);
+  background-size: 30px 30px;
+  background-position: 0 0, 15px 15px;
+}
+
+.card-shadow-luxury {
+  box-shadow: 
+    0 20px 40px -15px rgba(60, 35, 15, 0.18),
+    0 0 0 1px rgba(139, 90, 43, 0.08),
+    0 2px 4px rgba(0, 0, 0, 0.04);
+}
+
+.card-gold-border {
+  border: 1px solid rgba(212, 175, 55, 0.45);
+}
+
+@keyframes gentleFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-6px) rotate(0.8deg);
+  }
+}
+
+.animate-gentle-float {
+  animation: gentleFloat 5s ease-in-out infinite;
+}
+
+@keyframes pulseGlow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 4s ease-in-out infinite;
+}
